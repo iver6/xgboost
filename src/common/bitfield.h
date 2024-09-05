@@ -30,7 +30,7 @@
 
 namespace xgboost {
 
-#if defined(__CUDACC__)
+#if defined(__CUDACC__) 
 using BitFieldAtomicType = unsigned long long;  // NOLINT
 
 __forceinline__ __device__ BitFieldAtomicType AtomicOr(BitFieldAtomicType* address,

@@ -327,6 +327,11 @@ class EvalPrecision : public EvalRankWithCache<ltr::PreCache> {
       return Finalize(ctx_, info, pre.Residue(), pre.Weights());
     }
 
+    if (ctx_->IsMUSA()) {
+      auto pre = musa_impl::PreScore(ctx_, info, predt, p_cache);
+      return Finalize(ctx_, info, pre.Residue(), pre.Weights());
+    }
+
     auto gptr = p_cache->DataGroupPtr(ctx_);
     auto h_label = info.labels.HostView().Slice(linalg::All(), 0);
     auto h_predt = linalg::MakeTensorView(ctx_, &predt, predt.Size());
@@ -370,6 +375,11 @@ class EvalNDCG : public EvalRankWithCache<ltr::NDCGCache> {
               std::shared_ptr<ltr::NDCGCache> p_cache) override {
     if (ctx_->IsCUDA()) {
       auto ndcg = cuda_impl::NDCGScore(ctx_, info, preds, minus_, p_cache);
+      return Finalize(ctx_, info, ndcg.Residue(), ndcg.Weights());
+    }
+
+    if (ctx_->IsMUSA()) {
+      auto ndcg = musa_impl::NDCGScore(ctx_, info, preds, minus_, p_cache);
       return Finalize(ctx_, info, ndcg.Residue(), ndcg.Weights());
     }
 
@@ -428,6 +438,11 @@ class EvalMAPScore : public EvalRankWithCache<ltr::MAPCache> {
               std::shared_ptr<ltr::MAPCache> p_cache) override {
     if (ctx_->IsCUDA()) {
       auto map = cuda_impl::MAPScore(ctx_, info, predt, minus_, p_cache);
+      return Finalize(ctx_, info, map.Residue(), map.Weights());
+    }
+
+    if (ctx_->IsMUSA()) {
+      auto map = musa_impl::MAPScore(ctx_, info, predt, minus_, p_cache);
       return Finalize(ctx_, info, map.Residue(), map.Weights());
     }
 

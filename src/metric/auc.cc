@@ -258,7 +258,7 @@ template <typename Curve>
 class EvalAUC : public MetricNoCache {
   double Eval(const HostDeviceVector<bst_float> &preds, const MetaInfo &info) override {
     double auc {0};
-    if (ctx_->Device().IsCUDA()) {
+    if (ctx_->Device().IsMUSA()) {
       preds.SetDevice(ctx_->Device());
       info.labels.SetDevice(ctx_->Device());
       info.weights_.SetDevice(ctx_->Device());
@@ -336,7 +336,7 @@ class EvalROCAUC : public EvalAUC<EvalROCAUC> {
     double auc{0};
     uint32_t valid_groups = 0;
     auto n_threads = ctx_->Threads();
-    if (ctx_->IsCUDA()) {
+    if (ctx_->IsMUSA()) {
       std::tie(auc, valid_groups) =
           GPURankingAUC(ctx_, predts.ConstDeviceSpan(), info, &this->d_cache_);
     } else {
@@ -351,7 +351,7 @@ class EvalROCAUC : public EvalAUC<EvalROCAUC> {
     double auc{0};
     auto n_threads = ctx_->Threads();
     CHECK_NE(n_classes, 0);
-    if (ctx_->IsCUDA()) {
+    if (ctx_->IsMUSA()) {
       auc = GPUMultiClassROCAUC(ctx_, predts.ConstDeviceSpan(), info, &this->d_cache_, n_classes);
     } else {
       auc = MultiClassOVR(ctx_, predts.ConstHostVector(), info, n_classes, n_threads, BinaryROCAUC);
@@ -362,7 +362,7 @@ class EvalROCAUC : public EvalAUC<EvalROCAUC> {
   std::tuple<double, double, double>
   EvalBinary(HostDeviceVector<float> const &predts, MetaInfo const &info) {
     double fp, tp, auc;
-    if (ctx_->IsCUDA()) {
+    if (ctx_->IsMUSA()) {
       std::tie(fp, tp, auc) =
           GPUBinaryROCAUC(ctx_, predts.ConstDeviceSpan(), info, &this->d_cache_);
     } else {
@@ -383,7 +383,7 @@ XGBOOST_REGISTER_METRIC(EvalAUC, "auc")
 .describe("Receiver Operating Characteristic Area Under the Curve.")
 .set_body([](const char*) { return new EvalROCAUC(); });
 
-#if !defined(XGBOOST_USE_CUDA)
+#if !defined(XGBOOST_USE_CUDA) && !defined(XGBOOST_USE_MUSA)
 std::tuple<double, double, double> GPUBinaryROCAUC(Context const *, common::Span<float const>,
                                                    MetaInfo const &,
                                                    std::shared_ptr<DeviceAUCCache> *) {
@@ -413,7 +413,7 @@ class EvalPRAUC : public EvalAUC<EvalPRAUC> {
   std::tuple<double, double, double>
   EvalBinary(HostDeviceVector<float> const &predts, MetaInfo const &info) {
     double pr, re, auc;
-    if (ctx_->IsCUDA()) {
+    if (ctx_->IsMUSA()) {
       std::tie(pr, re, auc) = GPUBinaryPRAUC(ctx_, predts.ConstDeviceSpan(), info, &this->d_cache_);
     } else {
       std::tie(pr, re, auc) =
@@ -425,7 +425,7 @@ class EvalPRAUC : public EvalAUC<EvalPRAUC> {
 
   double EvalMultiClass(HostDeviceVector<float> const &predts, MetaInfo const &info,
                         size_t n_classes) {
-    if (ctx_->IsCUDA()) {
+    if (ctx_->IsMUSA()) {
       return GPUMultiClassPRAUC(ctx_, predts.ConstDeviceSpan(), info, &d_cache_, n_classes);
     } else {
       auto n_threads = this->ctx_->Threads();
@@ -438,7 +438,7 @@ class EvalPRAUC : public EvalAUC<EvalPRAUC> {
     double auc{0};
     uint32_t valid_groups = 0;
     auto n_threads = ctx_->Threads();
-    if (ctx_->IsCUDA()) {
+    if (ctx_->IsMUSA()) {
       std::tie(auc, valid_groups) =
           GPURankingPRAUC(ctx_, predts.ConstDeviceSpan(), info, &d_cache_);
     } else {
@@ -460,7 +460,7 @@ XGBOOST_REGISTER_METRIC(AUCPR, "aucpr")
     .describe("Area under PR curve for both classification and rank.")
     .set_body([](char const *) { return new EvalPRAUC{}; });
 
-#if !defined(XGBOOST_USE_CUDA)
+#if !defined(XGBOOST_USE_CUDA) && !defined(XGBOOST_USE_MUSA)
 std::tuple<double, double, double> GPUBinaryPRAUC(Context const *, common::Span<float const>,
                                                   MetaInfo const &,
                                                   std::shared_ptr<DeviceAUCCache> *) {
